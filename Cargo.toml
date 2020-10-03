@@ -1,0 +1,10 @@
+[package]
+authors = ["Peter Allin <peter@peca.dk>"]
+edition = "2018"
+name = "mgs"
+version = "0.1.0"
+
+[dependencies]
+git2 = "0.13"
+structopt = "0.3"
+walkdir = "2.3"
