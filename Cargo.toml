@@ -1,6 +1,7 @@
 [package]
 authors = ["Peter Allin <peter@peca.dk>"]
 edition = "2018"
+license = "MIT"
 name = "mgs"
 version = "0.1.0"
 
