@@ -2,7 +2,10 @@ use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 use walkdir::WalkDir;
 
-fn dot_git_dirs(path: &Path) -> impl Iterator<Item = git2::Repository> {
+mod repostate;
+use repostate::{get_repo_state, RepoState};
+
+fn git_repos(path: &Path) -> impl Iterator<Item = git2::Repository> {
     WalkDir::new(path)
         .into_iter()
         .filter_map(Result::ok)
@@ -11,19 +14,10 @@ fn dot_git_dirs(path: &Path) -> impl Iterator<Item = git2::Repository> {
         .map(|p| git2::Repository::open(p).unwrap())
 }
 
-fn print_git_dirs(path: &Path) {
-    for p in dot_git_dirs(path) {
-        println!(
-            "{:?}: {:?} -- {}",
-            p.path(),
-            p.state(),
-            if !p.index().unwrap().is_empty() {
-                "I"
-            } else {
-                ""
-            }
-        );
-        for s in p
+fn print_changed(path: &Path) {
+    for repo in git_repos(path).filter(|r| has_changes(r)) {
+        println!("{:?}: {:?}", repo.path(), get_repo_state(&repo),);
+        for s in repo
             .statuses(Some(
                 git2::StatusOptions::new()
                     .include_ignored(false)
@@ -38,6 +32,17 @@ fn print_git_dirs(path: &Path) {
     }
 }
 
+fn has_changes(repo: &git2::Repository) -> bool {
+    let repo_unclean = get_repo_state(repo) != RepoState::Clean;
+    let mut options = git2::StatusOptions::new();
+    let file_changes = !repo
+        .statuses(Some(options.include_ignored(false).include_untracked(true)))
+        .unwrap()
+        .is_empty();
+
+    repo_unclean || file_changes
+}
+
 #[derive(StructOpt)]
 struct Options {
     top_dir: PathBuf,
@@ -45,5 +50,5 @@ struct Options {
 
 fn main() {
     let options = Options::from_args();
-    print_git_dirs(&options.top_dir);
+    print_changed(&options.top_dir);
 }
