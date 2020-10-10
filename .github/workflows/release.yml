@@ -33,10 +33,43 @@ jobs:
           name: linux
           path: output/mgs-linux-${{ steps.vars.outputs.version }}.tar.gz
 
+  windows:
+    runs-on: windows-latest
+    outputs:
+      version: ${{ steps.vars.outputs.version }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v2
+      - name: Debug env
+        run: |
+          dir env:
+      - name: Set variables
+        id: vars
+        run: |
+          $version = $env:GITHUB_REF -replace "refs/tags/", ""
+          echo "::set-output name=version::$version"
+      - name: Debug version
+        run: echo ${{ steps.vars.outputs.version }}
+      - name: build
+        run: cargo build --release
+      - name: debug dirs
+        run: ls -r
+      - name: Copy to output
+        run: |
+          mkdir output/mgs-${{ steps.vars.outputs.version }}
+          copy-item target/release/mgs.exe -destination output
+          copy-item LICENSE -destination output
+      - name: Upload Windows ZIP
+        uses: actions/upload-artifact@v2
+        with:
+          name: windows-zip
+          path: output/*
+
   release:
     runs-on: ubuntu-latest
     needs:
       - linux
+      - windows
     steps:
       - name: Create release
         id: create_release
@@ -48,13 +81,13 @@ jobs:
           release_name: ${{ needs.linux.outputs.version }}
           draft: false
           prerelease: false
-      - name: Download artifacts
+      - name: Download Linux artifacts
         uses: actions/download-artifact@v2
         with:
           name: linux
       - name: Debug
         run: ls -R
-      - name: Upload
+      - name: Upload Linux
         uses: actions/upload-release-asset@v1
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -63,3 +96,21 @@ jobs:
           asset_path: mgs-linux-${{ needs.linux.outputs.version }}.tar.gz
           asset_name: mgs-linux-${{ needs.linux.outputs.version }}.tar.gz
           asset_content_type: application/gzip
+      - name: Download Windows ZIP
+        uses: actions/download-artifact@v2
+        with:
+          name: windows-zip
+          path: mgs-windows-${{ needs.windows.outputs.version }}
+      - name: Debug 2
+        run: find .
+      - name: Zip Windows
+        run: zip windows.zip mgs-windows-${{ needs.windows.outputs.version }}/*
+      - name: Upload Windows
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }}
+          asset_path: ./windows.zip
+          asset_name: mgs-windows-${{ needs.windows.outputs.version}}.zip
+          asset_content_type: application/zip
