@@ -3,7 +3,7 @@ use walkdir::WalkDir;
 
 use crate::repostate::{get_repo_state, RepoState};
 
-pub fn git_repos(path: &Path) -> impl Iterator<Item = git2::Repository> {
+pub fn find_git_repos(path: &Path) -> impl Iterator<Item = git2::Repository> {
     WalkDir::new(path)
         .into_iter()
         .filter_map(Result::ok)

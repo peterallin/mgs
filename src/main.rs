@@ -5,10 +5,10 @@ mod repostate;
 use repostate::get_repo_state;
 
 mod repos;
-use repos::{git_repos, has_changes};
+use repos::{find_git_repos, has_changes};
 
 fn print_changed(path: &Path) {
-    for repo in git_repos(path).filter(|r| has_changes(r)) {
+    for repo in find_git_repos(path).filter(|r| has_changes(r)) {
         println!("{:?}: {:?}", repo.path(), get_repo_state(&repo),);
         for s in repo
             .statuses(Some(
