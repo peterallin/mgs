@@ -5,7 +5,7 @@ mod repostate;
 use repostate::get_repo_state;
 
 mod repos;
-use repos::{find_git_repos, has_changes};
+use repos::{find_git_repos, has_changes, unignored_and_untracked};
 
 fn print_statuses(statuses: git2::Statuses) {
     for s in statuses.iter() {
@@ -14,14 +14,8 @@ fn print_statuses(statuses: git2::Statuses) {
     println!();
 }
 
-fn ignored_and_untracked() -> git2::StatusOptions {
-    let mut options = git2::StatusOptions::new();
-    options.include_ignored(false).include_untracked(true);
-    options
-}
-
 fn print_changed(path: &Path) {
-    let (oks, errs) : (Vec<_>, Vec<_>)= find_git_repos(path).partition(Result::is_ok);
+    let (oks, errs): (Vec<_>, Vec<_>) = find_git_repos(path).partition(Result::is_ok);
 
     for repo in oks
         .into_iter()
@@ -29,7 +23,7 @@ fn print_changed(path: &Path) {
         .filter(|r| has_changes(r))
     {
         println!("{:?}: {:?}", repo.path(), get_repo_state(&repo),);
-        match repo.statuses(Some(&mut ignored_and_untracked())) {
+        match repo.statuses(Some(&mut unignored_and_untracked())) {
             Ok(statuses) => print_statuses(statuses),
             Err(e) => println!("Failed to get status of {}: {}", repo.path().display(), e),
         }

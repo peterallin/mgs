@@ -14,11 +14,16 @@ pub fn find_git_repos(path: &Path) -> impl Iterator<Item = Result<git2::Reposito
 
 pub fn has_changes(repo: &git2::Repository) -> bool {
     let repo_unclean = get_repo_state(repo) != RepoState::Clean;
-    let mut options = git2::StatusOptions::new();
     let file_changes = !repo
-        .statuses(Some(options.include_ignored(false).include_untracked(true)))
+        .statuses(Some(&mut unignored_and_untracked()))
         .unwrap()
         .is_empty();
 
     repo_unclean || file_changes
+}
+
+pub fn unignored_and_untracked() -> git2::StatusOptions {
+    let mut options = git2::StatusOptions::new();
+    options.include_ignored(false).include_untracked(true);
+    options
 }
