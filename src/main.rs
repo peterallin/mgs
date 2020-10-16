@@ -21,10 +21,7 @@ fn ignored_and_untracked() -> git2::StatusOptions {
 }
 
 fn print_changed(path: &Path) {
-    let (oks, errs): (
-        Vec<Result<git2::Repository, git2::Error>>,
-        Vec<Result<git2::Repository, git2::Error>>,
-    ) = find_git_repos(path).partition(Result::is_ok);
+    let (oks, errs) : (Vec<_>, Vec<_>)= find_git_repos(path).partition(Result::is_ok);
 
     for repo in oks
         .into_iter()
