@@ -8,7 +8,16 @@ mod repos;
 use repos::{find_git_repos, has_changes};
 
 fn print_changed(path: &Path) {
-    for repo in find_git_repos(path).filter(|r| has_changes(r)) {
+    let (oks, errs): (
+        Vec<Result<git2::Repository, git2::Error>>,
+        Vec<Result<git2::Repository, git2::Error>>,
+    ) = find_git_repos(path).partition(Result::is_ok);
+
+    for repo in oks
+        .into_iter()
+        .filter_map(Result::ok)
+        .filter(|r| has_changes(r))
+    {
         println!("{:?}: {:?}", repo.path(), get_repo_state(&repo),);
         for s in repo
             .statuses(Some(
@@ -22,6 +31,17 @@ fn print_changed(path: &Path) {
             println!("  {:?}: {:?}", s.path(), s.status());
         }
         println!();
+    }
+
+    if !errs.is_empty() {
+        // TODO: It would be nice if this could list the directories that we
+        // were unable to treat as repositories along with the error message.
+        // Most likely the error message will contain the path, but still...
+        // I probably need to make an error type wrapping git2::Error.
+        println!("The following erros occurred while querying repositories:");
+        for e in errs.into_iter().filter_map(Result::err) {
+            println!("  {}", e);
+        }
     }
 }
 

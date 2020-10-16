@@ -3,13 +3,13 @@ use walkdir::WalkDir;
 
 use crate::repostate::{get_repo_state, RepoState};
 
-pub fn find_git_repos(path: &Path) -> impl Iterator<Item = git2::Repository> {
+pub fn find_git_repos(path: &Path) -> impl Iterator<Item = Result<git2::Repository, git2::Error> > {
     WalkDir::new(path)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_name().to_string_lossy().ends_with(".git"))
         .map(|e| e.path().to_owned())
-        .map(|p| git2::Repository::open(p).unwrap())
+        .map(|p| git2::Repository::open(p))
 }
 
 pub fn has_changes(repo: &git2::Repository) -> bool {
