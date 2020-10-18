@@ -1,41 +1,46 @@
+use itertools::chain;
 use std::path::{Path, PathBuf};
 use structopt::StructOpt;
 
 mod repostate;
-use repostate::get_repo_state;
+use repostate::{get_repo_state, RepoState};
 
 mod repos;
-use repos::{find_git_repos, has_changes, unignored_and_untracked};
-
-fn print_statuses(statuses: git2::Statuses) {
-    for s in statuses.iter() {
-        println!("  {:?}: {:?}", s.path(), s.status());
-    }
-    println!();
-}
+use repos::{changes, find_git_repos};
 
 fn print_changed(path: &Path) {
-    let (oks, errs): (Vec<_>, Vec<_>) = find_git_repos(path).partition(Result::is_ok);
-
-    for repo in oks
+    let (oks, find_errs): (Vec<_>, Vec<_>) = find_git_repos(path).partition(Result::is_ok);
+    let (oks, changes_errs): (Vec<_>, Vec<_>) = oks
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|r| has_changes(r))
-    {
-        println!("{:?}: {:?}", repo.path(), get_repo_state(&repo),);
-        match repo.statuses(Some(&mut unignored_and_untracked())) {
-            Ok(statuses) => print_statuses(statuses),
-            Err(e) => println!("Failed to get status of {}: {}", repo.path().display(), e),
+        .map(|repo| {
+            changes(&repo).map(|changes| (repo.path().to_owned(), get_repo_state(&repo), changes))
+        })
+        .partition(Result::is_ok);
+
+    for (repo_path, repo_state, changes) in oks.into_iter().filter_map(Result::ok) {
+        if repo_state != RepoState::Clean || !changes.is_empty() {
+            println!("{}: {}", repo_path.display(), repo_state);
+            for change in changes {
+                println!("  {:?}", change)
+            }
+            println!();
         }
     }
 
-    if !errs.is_empty() {
+    if !find_errs.is_empty() || !changes_errs.is_empty() {
+        println!(
+            "\n\nThe following problems occurred while looking for git repos and their statuses:"
+        );
+
         // TODO: It would be nice if this could list the directories that we
         // were unable to treat as repositories along with the error message.
         // Most likely the error message will contain the path, but still...
         // I probably need to make an error type wrapping git2::Error.
-        println!("The following erros occurred while querying repositories:");
-        for e in errs.into_iter().filter_map(Result::err) {
+        for e in chain(
+            find_errs.into_iter().filter_map(Result::err),
+            changes_errs.into_iter().filter_map(Result::err),
+        ) {
             println!("  {}", e);
         }
     }
