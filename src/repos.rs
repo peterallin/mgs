@@ -1,4 +1,5 @@
-use std::path::{Path, PathBuf};
+use anyhow::Context;
+use std::path::Path;
 use walkdir::WalkDir;
 
 #[derive(Debug)]
@@ -9,19 +10,24 @@ pub enum Change {
     Conflicted(String),
 }
 
-pub fn find_git_repos(path: &Path) -> impl Iterator<Item = Result<git2::Repository, (PathBuf, git2::Error)>> {
+pub fn find_git_repos(
+    path: &Path,
+) -> impl Iterator<Item = Result<git2::Repository, anyhow::Error>> {
     WalkDir::new(path)
         .into_iter()
         .filter_map(Result::ok)
         .filter(|e| e.file_name().to_string_lossy().ends_with(".git"))
         .map(|e| e.path().to_owned())
-        .map(|p|git2::Repository::open(&p).map_err(|e| (p, e)))
-        
+        .map(|p| {
+            git2::Repository::open(&p)
+                .with_context(|| format!("Unable to find repository in {}", p.display()))
+        })
 }
 
-pub fn changes(repo: &git2::Repository) -> Result<Vec<Change>, (PathBuf, git2::Error)> {
+pub fn changes(repo: &git2::Repository) -> Result<Vec<Change>, anyhow::Error> {
     Ok(repo
-        .statuses(Some(&mut unignored_and_untracked())).map_err(|e| (repo.path().to_owned(), e))?
+        .statuses(Some(&mut unignored_and_untracked()))
+        .with_context(|| format!("Unable to get status of {}", repo.path().display()))?
         .iter()
         .map(to_change)
         .filter_map(|c| c)

@@ -33,11 +33,11 @@ fn print_changed(path: &Path) {
             "\n\nThe following problems occurred while looking for git repos and their statuses:"
         );
 
-        for (path, error) in chain(
+        for error in chain(
             find_errs.into_iter().filter_map(Result::err),
             changes_errs.into_iter().filter_map(Result::err),
         ) {
-            println!("  {}: {}", path.display(), error.message());
+            println!("{:?}\n\n", error);
         }
     }
 }
