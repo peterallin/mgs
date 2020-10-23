@@ -33,15 +33,11 @@ fn print_changed(path: &Path) {
             "\n\nThe following problems occurred while looking for git repos and their statuses:"
         );
 
-        // TODO: It would be nice if this could list the directories that we
-        // were unable to treat as repositories along with the error message.
-        // Most likely the error message will contain the path, but still...
-        // I probably need to make an error type wrapping git2::Error.
-        for e in chain(
+        for (path, error) in chain(
             find_errs.into_iter().filter_map(Result::err),
             changes_errs.into_iter().filter_map(Result::err),
         ) {
-            println!("  {}", e);
+            println!("  {}: {}", path.display(), error.message());
         }
     }
 }
