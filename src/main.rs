@@ -6,7 +6,7 @@ mod repostate;
 use repostate::{get_repo_state, RepoState};
 
 mod repos;
-use repos::{changes, find_git_repos};
+use repos::{changes, find_git_repos, Change};
 
 fn print_changed(path: &Path) {
     let (oks, find_errs): (Vec<_>, Vec<_>) = find_git_repos(path).partition(Result::is_ok);
@@ -20,10 +20,27 @@ fn print_changed(path: &Path) {
 
     for (repo_path, repo_state, changes) in oks.into_iter().filter_map(Result::ok) {
         if repo_state != RepoState::Clean || !changes.is_empty() {
-            println!("{}: {}", repo_path.display(), repo_state);
-            for change in changes {
-                println!("  {:?}", change)
+            let added = count(&changes, |c| matches!(c, Change::Added(_)));
+            let modified = count(&changes, |c| matches!(c, Change::Modified(_)));
+            let removed = count(&changes, |c| matches!(c, Change::Removed(_)));
+            let conflicted = count(&changes, |c| matches!(c, Change::Conflicted(_)));
+
+            print!("{}: ", repo_path.display());
+            if repo_state != RepoState::Clean {
+                print!("{}, ", repo_state)
             }
+            if added > 0 {
+                print!("{} added ", added)
+            };
+            if modified > modified {
+                print!("{} modified ", modified)
+            };
+            if removed > 0 {
+                print!("{} removed ", removed)
+            };
+            if conflicted > 0 {
+                print!("{} conflicted", conflicted)
+            };
             println!();
         }
     }
@@ -40,6 +57,13 @@ fn print_changed(path: &Path) {
             println!("{:?}\n\n", error);
         }
     }
+}
+
+fn count<F>(changes: &Vec<Change>, f: F) -> usize
+where
+    F: Fn(&Change) -> bool,
+{
+    changes.iter().filter(|c| f(c)).count()
 }
 
 #[derive(StructOpt)]
