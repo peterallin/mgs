@@ -16,7 +16,7 @@ pub fn find_git_repos(
     WalkDir::new(path)
         .into_iter()
         .filter_map(Result::ok)
-        .filter(|e| e.file_name().to_string_lossy().ends_with(".git"))
+        .filter(|e| e.file_name().to_string_lossy() == ".git")
         .map(|e| e.path().to_owned())
         .map(|p| {
             git2::Repository::open(&p)
