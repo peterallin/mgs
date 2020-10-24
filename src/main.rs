@@ -10,7 +10,8 @@ struct Options {
     top_dir: PathBuf,
 }
 
-fn main() {
+fn main() -> anyhow::Result<()> {
     let options = Options::from_args();
-    output::print_changed(&options.top_dir);
+    output::print_changed(&options.top_dir)?;
+    Ok(())
 }

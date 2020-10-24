@@ -1,9 +1,10 @@
 use crate::repos::{changes, find_git_repos, Change};
 use crate::repostate::{get_repo_state, RepoState};
+use anyhow::anyhow;
 use itertools::chain;
 use std::path::Path;
 
-pub fn print_changed(path: &Path) {
+pub fn print_changed(path: &Path) -> anyhow::Result<()> {
     let (oks, find_errs): (Vec<_>, Vec<_>) = find_git_repos(path).partition(Result::is_ok);
     let (oks, changes_errs): (Vec<_>, Vec<_>) = oks
         .into_iter()
@@ -13,14 +14,26 @@ pub fn print_changed(path: &Path) {
         })
         .partition(Result::is_ok);
 
+    let top_path = path
+        .canonicalize()?
+        .parent()
+        .unwrap_or(Path::new("/"))
+        .to_owned();
     for (repo_path, repo_state, changes) in oks.into_iter().filter_map(Result::ok) {
         if repo_state != RepoState::Clean || !changes.is_empty() {
+            let relative_path = repo_path.strip_prefix(&top_path)?.parent().ok_or_else(|| {
+                anyhow!(
+                    "{} is a git repository but has no parent",
+                    repo_path.display()
+                )
+            })?;
+            print!("{}: ", relative_path.display());
+
             let added = count(&changes, |c| matches!(c, Change::Added(_)));
             let modified = count(&changes, |c| matches!(c, Change::Modified(_)));
             let removed = count(&changes, |c| matches!(c, Change::Removed(_)));
             let conflicted = count(&changes, |c| matches!(c, Change::Conflicted(_)));
 
-            print!("{}: ", repo_path.display());
             if repo_state != RepoState::Clean {
                 print!("{}, ", repo_state)
             }
@@ -52,6 +65,8 @@ pub fn print_changed(path: &Path) {
             println!("{:?}\n\n", error);
         }
     }
+
+    Ok(())
 }
 
 fn count<F>(changes: &Vec<Change>, f: F) -> usize
