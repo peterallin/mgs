@@ -64,14 +64,16 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
 
     if !find_errs.is_empty() || !changes_errs.is_empty() {
         println!(
+            "{}",
             "\n\nThe following problems occurred while looking for git repos and their statuses:"
+                .red()
         );
 
         for error in chain(
             find_errs.into_iter().filter_map(Result::err),
             changes_errs.into_iter().filter_map(Result::err),
         ) {
-            println!("{:?}\n\n", error);
+            println!("{}", format!("{:?}\n\n", error).red());
         }
     }
 
