@@ -1,4 +1,7 @@
-use anyhow::{anyhow, Context};
+#[cfg(target_os = "windows")]
+use anyhow::anyhow;
+
+use anyhow::Context;
 use std::path::PathBuf;
 use structopt::StructOpt;
 
