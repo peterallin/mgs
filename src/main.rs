@@ -1,4 +1,4 @@
-use anyhow::Context;
+use anyhow::{anyhow, Context};
 use std::path::PathBuf;
 use structopt::StructOpt;
 
@@ -13,7 +13,8 @@ struct Options {
 
 fn main() -> anyhow::Result<()> {
     #[cfg(target_os = "windows")]
-    ansi_term::enable_ansi_support().with_context(|| "Failed to enable ANSI color support")?;
+    ansi_term::enable_ansi_support()
+        .map_err(|e| anyhow!("Failed to enable ANSI color support, error code: {}", e))?;
 
     let options = Options::from_args();
     output::print_changed(&options.top_dir)
