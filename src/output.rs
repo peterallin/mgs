@@ -15,8 +15,7 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
         })
         .partition(Result::is_ok);
 
-    let top_path = path
-        .canonicalize()
+    let top_path = dunce::canonicalize(path)
         .with_context(|| format!("Failed to canonicalize {}", path.display()))?
         .parent()
         .unwrap_or_else(|| Path::new("/"))
@@ -34,7 +33,7 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
             let start = relative_path.parent().unwrap();
             print!(
                 "{}{}{}: ",
-                start.display(),
+                correct_separators(&start.display().to_string()),
                 std::path::MAIN_SEPARATOR,
                 last_part.to_string_lossy().bright_cyan()
             );
@@ -79,6 +78,11 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
     }
 
     Ok(())
+}
+
+fn correct_separators(path: &str) -> String {
+    let sep = std::path::MAIN_SEPARATOR.to_string();
+    path.replace("/", &sep).replace("\\", &sep)
 }
 
 fn count<F>(changes: &[Change], f: F) -> usize
