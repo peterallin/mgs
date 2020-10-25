@@ -1,6 +1,7 @@
 use crate::repos::{changes, find_git_repos, Change};
 use crate::repostate::{get_repo_state, RepoState};
 use anyhow::anyhow;
+use colored::*;
 use itertools::chain;
 use std::path::Path;
 
@@ -27,7 +28,15 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
                     repo_path.display()
                 )
             })?;
-            print!("{}: ", relative_path.display());
+
+            let last_part = relative_path.file_name().unwrap();
+            let start = relative_path.parent().unwrap();
+            print!(
+                "{}{}{}: ",
+                start.display(),
+                std::path::MAIN_SEPARATOR,
+                last_part.to_string_lossy().bright_cyan()
+            );
 
             let added = count(&changes, |c| matches!(c, Change::Added(_)));
             let modified = count(&changes, |c| matches!(c, Change::Modified(_)));
@@ -38,16 +47,16 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
                 print!("{}, ", repo_state)
             }
             if added > 0 {
-                print!("{} added ", added)
-            };
-            if modified > modified {
-                print!("{} modified ", modified)
+                print!("{}", format!("{}+ ", added).green());
             };
             if removed > 0 {
-                print!("{} removed ", removed)
+                print!("{}", format!("{}- ", removed).bright_red());
+            };
+            if modified > 0 {
+                print!("{}", format!("{}M ", modified).yellow());
             };
             if conflicted > 0 {
-                print!("{} conflicted", conflicted)
+                print!("{}", format!("{}C ", conflicted).purple());
             };
             println!();
         }
