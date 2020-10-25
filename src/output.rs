@@ -17,7 +17,7 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
     let top_path = path
         .canonicalize()?
         .parent()
-        .unwrap_or(Path::new("/"))
+        .unwrap_or_else(|| Path::new("/"))
         .to_owned();
     for (repo_path, repo_state, changes) in oks.into_iter().filter_map(Result::ok) {
         if repo_state != RepoState::Clean || !changes.is_empty() {
@@ -69,7 +69,7 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
     Ok(())
 }
 
-fn count<F>(changes: &Vec<Change>, f: F) -> usize
+fn count<F>(changes: &[Change], f: F) -> usize
 where
     F: Fn(&Change) -> bool,
 {
