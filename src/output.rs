@@ -1,6 +1,6 @@
 use crate::repos::{changes, find_git_repos, Change};
 use crate::repostate::{get_repo_state, RepoState};
-use anyhow::anyhow;
+use anyhow::{anyhow, Context};
 use colored::*;
 use itertools::chain;
 use std::path::Path;
@@ -16,7 +16,8 @@ pub fn print_changed(path: &Path) -> anyhow::Result<()> {
         .partition(Result::is_ok);
 
     let top_path = path
-        .canonicalize()?
+        .canonicalize()
+        .with_context(|| format!("Failed to canonicalize {}", path.display()))?
         .parent()
         .unwrap_or_else(|| Path::new("/"))
         .to_owned();
